@@ -45,8 +45,8 @@ struct ACUnitView: View {
             }
         }
         .frame(height: 108)
-        .animation(.easeOut(duration: 0.3), value: isOn)
-        .animation(.easeInOut(duration: 0.3), value: tint)
+        .animation(Theme.easeOut(0.3), value: isOn)
+        .animation(Theme.ease(0.3), value: tint)
         .accessibilityHidden(true)
     }
 }

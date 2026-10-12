@@ -2,10 +2,16 @@ import SwiftUI
 
 @main
 struct DomoApp: App {
-    @State private var store = AirConditionerStore()
+    @State private var climate = AirConditionerStore()
+    @State private var feeder = CatFeederStore()
 
     init() {
-        if let snapshot = Snapshot.request {
+        if CommandLine.arguments.contains("--feeder-status") {
+            Task {
+                await FeederDiagnostics.run()
+                exit(0)
+            }
+        } else if let snapshot = Snapshot.request {
             Task { Snapshot.run(path: snapshot.path, isOn: snapshot.isOn) }
         } else if let iconPath = Snapshot.iconRequest {
             Task { Snapshot.renderIcon(to: iconPath) }
@@ -14,24 +20,25 @@ struct DomoApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            AirConditionerPanel()
-                .environment(store)
+            RootPanel()
+                .environment(climate)
+                .environment(feeder)
         } label: {
-            MenuBarLabel(store: store)
+            MenuBarLabel(climate: climate)
         }
         .menuBarExtraStyle(.window)
     }
 }
 
-/// Icon plus the set temperature while running; just the outline when off.
+/// The AC and its set temperature while it runs; otherwise just the house.
 private struct MenuBarLabel: View {
-    let store: AirConditionerStore
+    let climate: AirConditionerStore
 
     var body: some View {
-        if store.isOn {
-            Text("\(Image(systemName: "air.conditioner.horizontal.fill")) \(TemperatureText.number(store.targetTemperature))°")
+        if climate.isOn {
+            Text("\(Image(systemName: "air.conditioner.horizontal.fill")) \(TemperatureText.number(climate.targetTemperature))°")
         } else {
-            Image(systemName: "air.conditioner.horizontal")
+            Image(systemName: "house")
         }
     }
 }

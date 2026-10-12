@@ -47,10 +47,10 @@ struct TemperatureSlider: View {
                     .offset(x: thumbX)
             }
             .animation(isDragging ? nil : Theme.spring(reduceMotion), value: value)
-            .animation(.easeOut(duration: 0.12), value: isDragging)
+            .animation(Theme.easeOut(0.12), value: isDragging)
             .contentShape(Rectangle())
             .gesture(drag(thumbX: thumbX, travel: travel))
-            .animation(.easeInOut(duration: 0.3), value: tint)
+            .animation(Theme.ease(0.3), value: tint)
         }
         .accessibilityElement()
         .accessibilityLabel("Target temperature")

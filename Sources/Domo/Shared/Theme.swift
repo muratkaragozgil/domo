@@ -18,9 +18,17 @@ enum Theme {
         }
     }
 
+    // Curves from the animate skill. The built-in ones are too weak for UI.
+    /// Entering, exiting, press feedback.
+    static func easeOut(_ duration: Double) -> Animation { .timingCurve(0.23, 1, 0.32, 1, duration: duration) }
+    /// Something moving or morphing on screen.
+    static func easeInOut(_ duration: Double) -> Animation { .timingCurve(0.77, 0, 0.175, 1, duration: duration) }
+    /// Color and tint changes (CSS `ease`).
+    static func ease(_ duration: Double) -> Animation { .timingCurve(0.25, 0.1, 0.25, 1, duration: duration) }
+
     /// Critically damped by default; nothing in this panel earns a bounce.
     static func spring(_ reduceMotion: Bool) -> Animation {
-        reduceMotion ? .easeOut(duration: 0.15) : .spring(duration: 0.3, bounce: 0)
+        reduceMotion ? Theme.easeOut(0.15) : .spring(duration: 0.3, bounce: 0)
     }
 }
 
@@ -83,7 +91,7 @@ struct PressableStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? scale : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .animation(Theme.easeOut(0.12), value: configuration.isPressed)
     }
 }
 
@@ -99,6 +107,6 @@ struct SurfaceBackground: View {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .strokeBorder(Theme.hairline)
             }
-            .animation(.easeOut(duration: 0.15), value: isHovered)
+            .animation(Theme.ease(0.15), value: isHovered)
     }
 }

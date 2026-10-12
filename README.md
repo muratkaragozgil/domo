@@ -4,9 +4,11 @@ A small macOS menu bar app for the smart things around the house.
 Click the icon, change what you need, get back to work.
 
 <p align="center">
-  <img src="docs/screenshot.png" width="400" alt="Domo's air conditioner panel">
+  <img src="docs/screenshot.png" width="270" alt="Domo's air conditioner panel">
   &nbsp;
-  <img src="docs/setup.png" width="400" alt="Connecting Domo to LG ThinQ">
+  <img src="docs/feeder.png" width="270" alt="Domo's cat feeder panel">
+  &nbsp;
+  <img src="docs/setup.png" width="270" alt="Connecting the cat feeder">
 </p>
 
 ## What it controls
@@ -14,9 +16,11 @@ Click the icon, change what you need, get back to work.
 | Accessory | Integration | Status |
 | --- | --- | --- |
 | Air conditioner | LG ThinQ (official ThinQ Connect API) | ✅ Working |
-| Cat feeder | Xiaomi (local miIO) | Planned |
+| Cat feeder | Xiaomi Smart Pet Food Feeder (local miIO, no cloud) | ✅ Working |
 | Smart plugs | Meross (local HTTP) | Planned |
 | Lights, curtains, door, cameras | — | Planned |
+
+Switch between accessories with the tabs at the top of the panel.
 
 ### Air conditioner
 
@@ -28,9 +32,25 @@ Click the icon, change what you need, get back to work.
 - Changes apply instantly and roll back if LG rejects them; rapid −/+ taps
   are sent as one command
 
-The motion is deliberately quiet: digits roll when the temperature changes,
-the vent glows in the mode's color while the unit runs, buttons react on
-press, and everything falls back to simple fades when *Reduce Motion* is on.
+### Cat feeder
+
+- Feed 1–10 portions on demand
+- Next scheduled meal, the full schedule, and pausing it
+- Food level, faults, and the desiccant countdown, with a reset for when you
+  swap the pack
+- Finds the feeder on your network by itself: no IP addresses to configure
+- A feed is never retried automatically, so the cat can't get fed twice by
+  accident
+
+Supports the `mmgg.feeder.fi1` model.
+
+### Motion
+
+Deliberately quiet, following Emil Kowalski's animation rules: digits roll
+when a number changes, the AC's vent glows in the mode's color while it runs,
+kibble drops into the bowl when a feed is confirmed, buttons react on press,
+and the tab indicator slides with a single clipped layer. With *Reduce
+Motion* on, movement gives way to simple fades.
 
 ## Requirements
 
@@ -47,6 +67,9 @@ This builds a release binary, wraps it in `Domo.app`, signs it ad hoc and
 installs it to `~/Applications`. Open it from there; it lives in the menu bar
 (no Dock icon). *Open at Login* is in the settings menu at the bottom right.
 
+The first time the cat feeder connects, macOS asks whether Domo may find
+devices on your local network. Allow it, or the feeder can't be reached.
+
 ## Connecting LG ThinQ
 
 1. Sign in at [connect-pat.lgthinq.com](https://connect-pat.lgthinq.com).
@@ -54,39 +77,53 @@ installs it to `~/Applications`. Open it from there; it lives in the menu bar
    **device control** permissions.
 3. Open Domo and paste the token. It's checked against LG before it's saved.
 
-Change it later from the settings menu → **Change Token…**.
-
 The region is currently fixed to Turkey (`x-country: TR`, EIC endpoint); see
 `ThinQClient.swift` to change it.
 
+## Connecting the cat feeder
+
+1. Get the feeder's device token with
+   [Xiaomi Cloud Tokens Extractor](https://github.com/PiotrMachowski/Xiaomi-cloud-tokens-extractor)
+   (sign in with your Xiaomi account; the model starts with `mmgg.feeder`).
+2. Open Domo's **Cat Feeder** tab and paste the 32-character token. Domo
+   looks for a feeder on your network that the token unlocks before saving it.
+
+Either token can be changed later from the settings menu → **Change Token…**.
+
 ## Privacy
 
-- The token is stored only on your Mac, in `~/.config/lg-thinq/token`,
-  readable by your user alone.
-- Domo talks to LG's API and nothing else. No analytics, no accounts.
+- Tokens are stored only on your Mac, readable by your user alone:
+  `~/.config/lg-thinq/token` and `~/.config/xiaomi-feeder/token`.
+- Domo talks to LG's API for the AC and directly to the feeder on your local
+  network. Nothing else: no analytics, no accounts.
 
 ## Project layout
 
 ```
 Sources/Domo/
-  App/                 App entry point, menu bar label, snapshot tooling
-  Shared/              Theme, reusable controls (tiles, toggles, slider), JSON
+  App/                 Entry point, root panel, menu bar label, snapshot tooling
+  Shared/              Theme, tiles, toggles, slider, token screen, panel footer
   Accessories/
-    AirConditioner/    LG ThinQ client, state store, panel, token screen
+    AirConditioner/    LG ThinQ client, state store, panel
+    CatFeeder/         miIO protocol, state store, panel, illustration
 Resources/             Images bundled into the app
 ```
 
-Each accessory keeps its client, its state and its views in its own folder,
-so adding one (say, `Accessories/CatFeeder/`) doesn't touch the others.
+Each accessory keeps its client, its state and its views in its own folder.
+Adding one means a new folder, a case in `AccessoryKind`, and a line in
+`RootPanel`.
 
 ### Previewing without the menu bar
 
 ```bash
-~/Applications/Domo.app/Contents/MacOS/Domo --snapshot panel.png --swiftui
+~/Applications/Domo.app/Contents/MacOS/Domo --snapshot panel.png --swiftui --tab feeder
 ```
 
-Renders the panel with demo data and quits. Add `--off` for the powered-off
-state, `--live` for your real unit, or `--setup` for the token screen.
+Renders the panel with demo data and quits. `--tab climate|feeder` picks the
+accessory, `--off` shows the AC powered off, `--live` uses your real devices,
+`--setup` shows the token screen (drop `--swiftui` for that one, since it
+contains a native text field). `Domo --feeder-status` runs a read-only check
+of the feeder from the command line.
 
 ## Credits
 
@@ -96,9 +133,12 @@ state, `--live` for your real unit, or `--setup` for the token screen.
   [`thinqconnect`](https://github.com/thinq-connect/pythinqconnect) SDK (Apache-2.0).
 - The air conditioner image is LG's product photo of the AC18BH, from
   [lg.com](https://www.lg.com/tr/klima/split-klima/ac18bh/). © LG Electronics.
+- The cat feeder image is Xiaomi's product photo of the Smart Pet Food Feeder,
+  from [mi.com](https://www.mi.com/global/product/xiaomi-smart-pet-food-feeder/). © Xiaomi.
 
 Domo is a personal project and isn't affiliated with or endorsed by LG
-Electronics. LG and ThinQ are trademarks of LG Electronics.
+Electronics or Xiaomi. LG and ThinQ are trademarks of LG Electronics; Xiaomi
+is a trademark of Xiaomi Inc.
 
 ## License
 

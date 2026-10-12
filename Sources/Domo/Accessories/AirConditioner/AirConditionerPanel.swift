@@ -1,5 +1,3 @@
-import AppKit
-import ServiceManagement
 import SwiftUI
 
 struct AirConditionerPanel: View {
@@ -14,7 +12,12 @@ struct AirConditionerPanel: View {
             if store.needsToken || isEditingToken {
                 ThinQTokenView(canCancel: !store.needsToken) { isEditingToken = false }
             } else if !store.hasLoaded, case .failed(let message) = store.status {
-                ErrorView(message: message) { store.reload() }
+                ConnectionErrorView(
+                    systemImage: "air.conditioner.horizontal",
+                    message: message,
+                    detail: "Check that this Mac is online. Domo retries on its own every few minutes.",
+                    onRetry: store.reload
+                )
             } else {
                 header
                 ACUnitView(isOn: store.isOn, tint: tint)
@@ -23,19 +26,21 @@ struct AirConditionerPanel: View {
                 controls
                     .redacted(reason: store.hasLoaded ? [] : .placeholder)
             }
-            footer
-                .padding(.top, 18)
+            PanelFooter(status: status, menuTitle: menuTitle, onRefresh: store.reload) {
+                isEditingToken = true
+            }
+            .padding(.top, 18)
         }
-        .padding(20)
-        .frame(width: 400)
-        .background { background }
-        .preferredColorScheme(.dark)
-        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
-            store.panelDidOpen()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in
-            store.panelDidClose()
-        }
+    }
+
+    /// A faint wash of the mode's color behind the panel, only while running.
+    static func wash(for store: AirConditionerStore) -> some View {
+        RadialGradient(
+            colors: [Theme.tint(for: store.mode).opacity(store.isOn ? 0.14 : 0), .clear],
+            center: .top, startRadius: 10, endRadius: 260
+        )
+        .animation(Theme.ease(0.3), value: store.isOn)
+        .animation(Theme.ease(0.3), value: store.mode)
     }
 
     // MARK: - Sections
@@ -112,12 +117,12 @@ struct AirConditionerPanel: View {
                 .foregroundStyle(.tertiary)
                 .padding(.horizontal, 56)
                 .contentTransition(.numericText())
-                .animation(.easeOut(duration: 0.2), value: store.temperatureRange)
+                .animation(Theme.easeOut(0.2), value: store.temperatureRange)
             }
             .padding(.top, 14)
             .opacity(store.canSetTemperature ? 1 : 0.35)
             .allowsHitTesting(store.canSetTemperature)
-            .animation(.easeOut(duration: 0.2), value: store.canSetTemperature)
+            .animation(Theme.easeOut(0.2), value: store.canSetTemperature)
             .help(store.canSetTemperature ? "" : "Fan mode has no temperature to set")
 
             tiles
@@ -126,7 +131,7 @@ struct AirConditionerPanel: View {
         // Off: keep everything visible but clearly asleep, and not clickable.
         .opacity(store.isOn ? 1 : 0.4)
         .allowsHitTesting(store.isOn && store.hasLoaded)
-        .animation(.easeOut(duration: 0.2), value: store.isOn)
+        .animation(Theme.easeOut(0.2), value: store.isOn)
     }
 
     private var tiles: some View {
@@ -167,136 +172,19 @@ struct AirConditionerPanel: View {
         }
     }
 
-    private var footer: some View {
-        HStack {
-            Label(statusText, systemImage: statusSymbol)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(statusColor)
-                .contentTransition(.opacity)
-                .animation(.easeOut(duration: 0.2), value: statusText)
-                .lineLimit(1)
-
-            Spacer()
-
-            SettingsMenu(
-                deviceName: store.deviceName,
-                modelName: store.modelName,
-                onRefresh: { store.reload() },
-                onChangeToken: { isEditingToken = true }
-            )
-        }
-    }
-
-    private var background: some View {
-        ZStack {
-            Theme.panel
-            // A faint wash of the mode's color, only while running.
-            RadialGradient(
-                colors: [tint.opacity(store.isOn ? 0.14 : 0), .clear],
-                center: .top, startRadius: 10, endRadius: 260
-            )
-            .animation(.easeInOut(duration: 0.4), value: store.isOn)
-            .animation(.easeInOut(duration: 0.4), value: store.mode)
-        }
-        .ignoresSafeArea()
-    }
-
     // MARK: - Status
 
-    private var statusText: String {
-        if let notice = store.notice { return notice }
-        if store.reportsError { return "AC reports an error" }
-        switch store.status {
-        case .connecting: return "Connecting…"
-        case .connected: return "Connected"
-        case .failed(let message): return message
-        }
+    private var menuTitle: String {
+        store.modelName.isEmpty ? store.deviceName : "\(store.deviceName) · \(store.modelName)"
     }
 
-    private var statusSymbol: String {
-        if store.notice != nil || store.reportsError { return "exclamationmark.triangle" }
+    private var status: StatusLine {
+        if let notice = store.notice { return .warning(notice) }
+        if store.reportsError { return .warning("AC reports an error") }
         return switch store.status {
-        case .connecting: "arrow.triangle.2.circlepath"
-        case .connected: "checkmark.shield"
-        case .failed: "exclamationmark.triangle"
+        case .connecting: .connecting
+        case .connected: .connected
+        case .failed(let message): .warning(message)
         }
-    }
-
-    private var statusColor: Color {
-        if store.notice != nil || store.reportsError { return .orange }
-        return switch store.status {
-        case .failed: .orange
-        default: .secondary
-        }
-    }
-}
-
-private struct SettingsMenu: View {
-    let deviceName: String
-    let modelName: String
-    let onRefresh: () -> Void
-    let onChangeToken: () -> Void
-
-    @State private var opensAtLogin = SMAppService.mainApp.status == .enabled
-
-    var body: some View {
-        Menu {
-            Section(modelName.isEmpty ? deviceName : "\(deviceName) · \(modelName)") {
-                Button("Refresh Now", action: onRefresh)
-                    .keyboardShortcut("r")
-                Button("Change Token…", action: onChangeToken)
-                Toggle("Open at Login", isOn: $opensAtLogin)
-            }
-            Divider()
-            Button("Quit Domo") { NSApp.terminate(nil) }
-                .keyboardShortcut("q")
-        } label: {
-            Image(systemName: "slider.horizontal.3")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.secondary)
-                .frame(width: 28, height: 28)
-                .contentShape(Rectangle())
-        }
-        .menuStyle(.button)
-        .buttonStyle(PressableStyle(scale: 0.9))
-        .menuIndicator(.hidden)
-        .accessibilityLabel("Settings")
-        .onChange(of: opensAtLogin) { _, enabled in
-            do {
-                if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
-            } catch {
-                opensAtLogin = SMAppService.mainApp.status == .enabled
-            }
-        }
-    }
-}
-
-/// Couldn't reach LG before the first load (offline, rate-limited…).
-private struct ErrorView: View {
-    let message: String
-    let onRetry: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Image(systemName: "air.conditioner.horizontal")
-                .font(.system(size: 28, weight: .light))
-                .foregroundStyle(.secondary)
-            Text(message)
-                .font(.system(size: 17, weight: .semibold))
-            Text("Check that this Mac is online. Domo retries on its own every few minutes.")
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Button(action: onRetry) {
-                Text("Try Again")
-                    .font(.system(size: 13, weight: .medium))
-                    .padding(.horizontal, 14)
-                    .frame(height: 32)
-                    .background { SurfaceBackground(radius: 8) }
-            }
-            .buttonStyle(PressableStyle())
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 8)
     }
 }

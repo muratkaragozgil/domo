@@ -20,7 +20,7 @@ struct PowerButton: View {
                 .contentShape(Circle())
         }
         .buttonStyle(PressableStyle(scale: 0.92))
-        .animation(.easeOut(duration: 0.2), value: isOn)
+        .animation(Theme.easeOut(0.2), value: isOn)
         .help(isOn ? "Turn off" : "Turn on")
         .accessibilityLabel(isOn ? "Turn off" : "Turn on")
     }
@@ -93,8 +93,87 @@ struct PillToggle: View {
     }
 }
 
-/// One of the four tiles. Opens a native menu: familiar, keyboard-navigable,
-/// and it never fights the panel for space.
+
+/// What a tile shows: icon, title, value. Shared by every tile flavor so
+/// menu tiles and read-only tiles line up exactly.
+struct TileContent: View {
+    let title: String
+    let value: String
+    let systemImage: String
+    var iconTint: Color = .primary
+    var valueTint: Color = .primary
+    var showsChevron = true
+    var isHovered = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .top) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 19, weight: .light))
+                    .foregroundStyle(iconTint)
+                    .contentTransition(.symbolEffect(.replace))
+                    .frame(height: 24)
+                Spacer(minLength: 0)
+                if showsChevron {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.tertiary)
+                        .padding(.top, 4)
+                }
+            }
+            Spacer(minLength: 12)
+            Text(title)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(valueTint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .id(value)
+                .transition(.blurReplace)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: 92, maxHeight: 92, alignment: .leading)
+        .background { SurfaceBackground(isHovered: isHovered) }
+        .contentShape(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous))
+        .animation(Theme.easeOut(0.2), value: value)
+        .animation(Theme.ease(0.2), value: valueTint)
+    }
+}
+
+/// A tile that opens a native menu: familiar, keyboard-navigable, and it
+/// never fights the panel for space.
+struct MenuTile<MenuContent: View>: View {
+    let title: String
+    let value: String
+    let systemImage: String
+    var iconTint: Color = .primary
+    var valueTint: Color = .primary
+    var isEnabled = true
+    @ViewBuilder let menu: () -> MenuContent
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Menu {
+            menu()
+        } label: {
+            TileContent(title: title, value: value, systemImage: systemImage, iconTint: iconTint,
+                        valueTint: valueTint, isHovered: isHovered)
+        }
+        .menuStyle(.button)
+        .buttonStyle(PressableStyle(scale: 0.97))
+        .menuIndicator(.hidden)
+        .onHover { isHovered = $0 }
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.45)
+        .accessibilityLabel(title)
+        .accessibilityValue(value)
+    }
+}
+
+/// A menu tile whose menu is a single choice from a list.
 struct ControlTile: View {
     struct Option: Identifiable {
         let id: String
@@ -109,10 +188,8 @@ struct ControlTile: View {
     let selection: String
     let onSelect: (String) -> Void
 
-    @State private var isHovered = false
-
     var body: some View {
-        Menu {
+        MenuTile(title: title, value: value, systemImage: systemImage, iconTint: iconTint, isEnabled: !options.isEmpty) {
             ForEach(options) { option in
                 Button {
                     onSelect(option.id)
@@ -124,44 +201,21 @@ struct ControlTile: View {
                     }
                 }
             }
-        } label: {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(alignment: .top) {
-                    Image(systemName: systemImage)
-                        .font(.system(size: 19, weight: .light))
-                        .foregroundStyle(iconTint)
-                        .contentTransition(.symbolEffect(.replace))
-                        .frame(height: 24)
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.tertiary)
-                        .padding(.top, 4)
-                }
-                Spacer(minLength: 12)
-                Text(title)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                Text(value)
-                    .font(.system(size: 14, weight: .medium))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .id(value)
-                    .transition(.blurReplace)
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, minHeight: 92, maxHeight: 92, alignment: .leading)
-            .background { SurfaceBackground(isHovered: isHovered) }
-            .contentShape(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous))
-            .animation(.easeOut(duration: 0.2), value: value)
         }
-        .menuStyle(.button)
-        .buttonStyle(PressableStyle(scale: 0.97))
-        .menuIndicator(.hidden)
-        .onHover { isHovered = $0 }
-        .disabled(options.isEmpty)
-        .opacity(options.isEmpty ? 0.45 : 1)
-        .accessibilityLabel(title)
-        .accessibilityValue(value)
+    }
+}
+
+/// Read-only tile for a reading that can't be changed from here.
+struct StatusTile: View {
+    let title: String
+    let value: String
+    let systemImage: String
+    var iconTint: Color = .primary
+    var valueTint: Color = .primary
+
+    var body: some View {
+        TileContent(title: title, value: value, systemImage: systemImage, iconTint: iconTint,
+                    valueTint: valueTint, showsChevron: false)
+            .accessibilityElement(children: .combine)
     }
 }

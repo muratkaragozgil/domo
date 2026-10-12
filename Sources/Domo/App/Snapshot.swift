@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// `Domo --snapshot <path.png> [--off]` renders the panel with demo data and
+/// `Domo --snapshot <path.png> [flags]` renders the panel with demo data and
 /// quits. Used to check the design without clicking the menu bar.
 enum Snapshot {
     static var request: (path: String, isOn: Bool)? {
@@ -47,11 +47,23 @@ enum Snapshot {
 
     private static var window: NSWindow?
 
+    /// Flags: `--tab climate|feeder`, `--off` (AC powered off), `--live`
+    /// (real devices), `--setup` (token screen), `--swiftui` (draws blurs).
     static func run(path: String, isOn: Bool) {
-        // `--live` renders the real AC's state instead of demo data.
-        let live = CommandLine.arguments.contains("--live")
-        let store = live ? AirConditionerStore() : AirConditionerStore(demo: isOn)
-        let hosting = NSHostingView(rootView: AirConditionerPanel(isEditingToken: CommandLine.arguments.contains("--setup")).environment(store))
+        let args = CommandLine.arguments
+        let live = args.contains("--live")
+        let tab = args.firstIndex(of: "--tab").flatMap { args.indices.contains($0 + 1) ? AccessoryKind(rawValue: args[$0 + 1]) : nil } ?? .climate
+        let climate = live ? AirConditionerStore() : AirConditionerStore(demo: isOn)
+        let feeder = live ? CatFeederStore() : CatFeederStore(demo: true)
+
+        func panel() -> some View {
+            RootPanel(forcedSelection: tab, startsEditingToken: args.contains("--setup"))
+                .environment(climate)
+                .environment(feeder)
+                .environment(\.colorScheme, .dark)
+        }
+
+        let hosting = NSHostingView(rootView: panel())
         hosting.frame.size = hosting.fittingSize
         let window = NSWindow(contentRect: hosting.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         window.contentView = hosting
@@ -60,17 +72,18 @@ enum Snapshot {
         window.orderFrontRegardless()
         self.window = window
 
-        // Let layout and the power transition settle before capturing.
         Task {
             if live {
-                for _ in 0..<40 where !store.hasLoaded { try? await Task.sleep(for: .milliseconds(250)) }
+                let loaded = { tab == .climate ? climate.hasLoaded : feeder.hasLoaded }
+                for _ in 0..<60 where !loaded() { try? await Task.sleep(for: .milliseconds(250)) }
                 hosting.frame.size = hosting.fittingSize
                 window.setContentSize(hosting.fittingSize)
             }
+            // Let layout and transitions settle before capturing.
             try? await Task.sleep(for: .seconds(1.2))
-            // ImageRenderer draws blurs and glows; cacheDisplay draws native menus. Pick per need.
-            if CommandLine.arguments.contains("--swiftui") {
-                let renderer = ImageRenderer(content: AirConditionerPanel(isEditingToken: CommandLine.arguments.contains("--setup")).environment(store).environment(\.colorScheme, .dark))
+            // ImageRenderer draws blurs and glows; cacheDisplay draws native menus.
+            if args.contains("--swiftui") {
+                let renderer = ImageRenderer(content: panel())
                 renderer.scale = 2
                 if let tiff = renderer.nsImage?.tiffRepresentation,
                    let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {

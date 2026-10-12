@@ -71,6 +71,8 @@ enum Snapshot {
         window.contentView = hosting
         window.isOpaque = false
         window.backgroundColor = .clear
+        // Note: a background process can't become active, so native switches
+        // draw in their inactive (grey) style here; the real panel is key.
         window.orderFrontRegardless()
         self.window = window
 

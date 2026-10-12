@@ -3,9 +3,6 @@ import SwiftUI
 struct PlugsPanel: View {
     @Environment(PlugsStore.self) private var store
 
-    /// Warm "power on" yellow.
-    static let accent = Color(red: 1.0, green: 0.82, blue: 0.38)
-
     var body: some View {
         VStack(spacing: 0) {
             if !store.hasLoaded {
@@ -120,9 +117,12 @@ private struct StripSection: View {
     }
 }
 
-/// One outlet. Toggled tens of times a day, so the motion is only what
-/// confirms the press: a 150ms color ease, the symbol filling, a small
-/// press scale. Right-click to rename.
+/// One outlet: the device's picture, its name, and the platform's own
+/// switch (macOS draws its switch here, iOS would draw its own). The tile
+/// stays neutral; state reads from the switch and the picture, which is in
+/// color while powered and grey while off. Clicking anywhere on the tile
+/// flips it too, so the target is the whole tile, not just the switch.
+/// Right-click to rename or change the picture.
 private struct OutletTile: View {
     let strip: PowerStrip
     let outlet: Outlet
@@ -133,101 +133,97 @@ private struct OutletTile: View {
     var body: some View {
         let name = store.name(of: outlet, in: strip)
         let icon = store.icon(of: outlet, in: strip)
-        let accent = PlugsPanel.accent
 
         Button {
             store.toggle(outlet, in: strip)
         } label: {
             VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .top) {
-                    // Full color while powered, grey and faded while off.
-                    Group {
-                        if let photo = store.photo(of: outlet, in: strip) {
-                            Image(nsImage: photo)
-                                .resizable()
-                                .interpolation(.high)
-                                .aspectRatio(contentMode: .fit)
-                                .frame(maxWidth: 62, maxHeight: 36, alignment: .leading)
-                                // A soft light behind it: real devices are often black.
-                                .background {
-                                    RadialGradient(colors: [.white.opacity(0.2), .clear], center: .center, startRadius: 2, endRadius: 36)
-                                        .frame(width: 78, height: 48)
-                                }
-                        } else if let image = icon.image {
-                            Image(nsImage: image)
-                                .resizable()
-                                .interpolation(.high)
-                                .frame(width: 28, height: 28)
-                        } else {
-                            Image(systemName: "poweroutlet.type.f")
-                                .resizable()
-                                .foregroundStyle(.secondary)
-                                .frame(width: 28, height: 28)
-                        }
-                    }
+                artwork(icon)
                     .frame(height: 36, alignment: .topLeading)
                     .saturation(outlet.isOn ? 1 : 0)
-                    .opacity(outlet.isOn ? 1 : 0.45)
-                    Spacer()
-                    Text(outlet.isOn ? "On" : "Off")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(outlet.isOn ? accent : Color(white: 0.45))
-                }
+                    .opacity(outlet.isOn ? 1 : 0.5)
                 Spacer(minLength: 8)
                 Text(name)
                     .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(outlet.isOn ? Color.primary : Color.secondary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
             }
             .padding(10)
             .frame(maxWidth: .infinity, minHeight: 80, maxHeight: 80, alignment: .leading)
-            .background {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(outlet.isOn ? accent.opacity(0.14) : (isHovered ? Theme.surfaceHover : Theme.surface))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(outlet.isOn ? accent.opacity(0.35) : Theme.hairline)
-                    }
-            }
+            .background { SurfaceBackground(radius: 12, isHovered: isHovered) }
             .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
-        .buttonStyle(PressableStyle(scale: 0.96))
-        .animation(Theme.ease(0.15), value: outlet.isOn)
-        .animation(Theme.ease(0.15), value: isHovered)
-        .onHover { isHovered = $0 }
-        .contextMenu {
-            Button("Rename…") { isRenaming = true }
-            Menu("Icon") {
-                Button("Choose Image…") { store.choosePhoto(for: outlet, in: strip) }
-                if store.photo(of: outlet, in: strip) != nil {
-                    Button("Remove Image") { store.removePhoto(for: outlet, in: strip) }
-                }
-                Divider()
-                Button {
-                    store.setIcon(nil, for: outlet, in: strip)
-                } label: {
-                    if store.hasCustomIcon(outlet, in: strip) { Text("Match Name") } else { Label("Match Name", systemImage: "checkmark") }
-                }
-                Divider()
-                ForEach(OutletIcon.allCases) { option in
-                    Button {
-                        store.setIcon(option, for: outlet, in: strip)
-                    } label: {
-                        if store.hasCustomIcon(outlet, in: strip) && option == icon {
-                            Label(option.title, systemImage: "checkmark")
-                        } else {
-                            Text(option.title)
-                        }
-                    }
-                }
-            }
+        .buttonStyle(PressableStyle(scale: 0.97))
+        .accessibilityHidden(true) // the switch below is the accessible control
+        .overlay(alignment: .topTrailing) {
+            Toggle(name, isOn: Binding(get: { outlet.isOn }, set: { _ in store.toggle(outlet, in: strip) }))
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .labelsHidden()
+                .padding(10)
+                .help("Turn \(name) \(outlet.isOn ? "off" : "on")")
         }
+        .animation(Theme.ease(0.15), value: outlet.isOn)
+        .onHover { isHovered = $0 }
+        .contextMenu { menu(icon: icon) }
         .popover(isPresented: $isRenaming, arrowEdge: .bottom) {
             RenameField(title: "Rename outlet", name: name) { store.rename(outlet, in: strip, to: $0) }
         }
-        .help("Click to turn \(outlet.isOn ? "off" : "on"). Right-click to rename.")
-        .accessibilityLabel(name)
-        .accessibilityValue(outlet.isOn ? "On" : "Off")
-        .accessibilityAddTraits(.isToggle)
+    }
+
+    @ViewBuilder
+    private func artwork(_ icon: OutletIcon) -> some View {
+        if let photo = store.photo(of: outlet, in: strip) {
+            Image(nsImage: photo)
+                .resizable()
+                .interpolation(.high)
+                .aspectRatio(contentMode: .fit)
+                .frame(maxWidth: 62, maxHeight: 36, alignment: .leading)
+                // A soft light behind it: real devices are often black.
+                .background {
+                    RadialGradient(colors: [.white.opacity(0.2), .clear], center: .center, startRadius: 2, endRadius: 36)
+                        .frame(width: 78, height: 48)
+                }
+        } else if let image = icon.image {
+            Image(nsImage: image)
+                .resizable()
+                .interpolation(.high)
+                .frame(width: 28, height: 28)
+        } else {
+            Image(systemName: "poweroutlet.type.f")
+                .resizable()
+                .foregroundStyle(.secondary)
+                .frame(width: 28, height: 28)
+        }
+    }
+
+    @ViewBuilder
+    private func menu(icon: OutletIcon) -> some View {
+        Button("Rename…") { isRenaming = true }
+        Menu("Icon") {
+            Button("Choose Image…") { store.choosePhoto(for: outlet, in: strip) }
+            if store.photo(of: outlet, in: strip) != nil {
+                Button("Remove Image") { store.removePhoto(for: outlet, in: strip) }
+            }
+            Divider()
+            Button {
+                store.setIcon(nil, for: outlet, in: strip)
+            } label: {
+                if store.hasCustomIcon(outlet, in: strip) { Text("Match Name") } else { Label("Match Name", systemImage: "checkmark") }
+            }
+            Divider()
+            ForEach(OutletIcon.allCases) { option in
+                Button {
+                    store.setIcon(option, for: outlet, in: strip)
+                } label: {
+                    if store.hasCustomIcon(outlet, in: strip) && option == icon {
+                        Label(option.title, systemImage: "checkmark")
+                    } else {
+                        Text(option.title)
+                    }
+                }
+            }
+        }
     }
 }

@@ -46,7 +46,8 @@ Supports the `mmgg.feeder.fi1` model.
 
 ### Smart plugs
 
-- Every outlet of every Meross strip on your network, one tap to switch
+- Every outlet of every Meross strip on your network, each with the
+  platform's own switch (the whole tile is clickable too)
 - Turn a whole strip on or off (off asks first: a router or charger may be
   plugged in)
 - Name strips and outlets with right-click → **Rename…**; names stay on

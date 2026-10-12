@@ -41,8 +41,7 @@ struct RootPanel: View {
                     RadialGradient(colors: [CatFeederPanel.accent.opacity(0.08), .clear],
                                    center: .top, startRadius: 10, endRadius: 260)
                 case .plugs:
-                    RadialGradient(colors: [PlugsPanel.accent.opacity(0.06), .clear],
-                                   center: .top, startRadius: 10, endRadius: 260)
+                    EmptyView()
                 }
             }
             .ignoresSafeArea()

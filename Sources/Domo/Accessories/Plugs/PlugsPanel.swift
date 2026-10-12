@@ -117,8 +117,7 @@ private struct StripSection: View {
     }
 }
 
-/// One outlet: the device's picture, its name, and the platform's own
-/// switch (macOS draws its switch here, iOS would draw its own). The tile
+/// One outlet: the device's picture, its name, and Domo's switch. The tile
 /// stays neutral; state reads from the switch and the picture, which is in
 /// color while powered and grey while off. Clicking anywhere on the tile
 /// flips it too, so the target is the whole tile, not just the switch.
@@ -157,10 +156,7 @@ private struct OutletTile: View {
         .buttonStyle(PressableStyle(scale: 0.97))
         .accessibilityHidden(true) // the switch below is the accessible control
         .overlay(alignment: .topTrailing) {
-            Toggle(name, isOn: Binding(get: { outlet.isOn }, set: { _ in store.toggle(outlet, in: strip) }))
-                .toggleStyle(.switch)
-                .controlSize(.mini)
-                .labelsHidden()
+            DomoSwitch(label: name, isOn: outlet.isOn) { store.toggle(outlet, in: strip) }
                 .padding(10)
                 .help("Turn \(name) \(outlet.isOn ? "off" : "on")")
         }
@@ -179,11 +175,12 @@ private struct OutletTile: View {
                 .resizable()
                 .interpolation(.high)
                 .aspectRatio(contentMode: .fit)
-                .frame(maxWidth: 62, maxHeight: 36, alignment: .leading)
+                // Narrow enough to clear the switch in the top-right corner.
+                .frame(maxWidth: 50, maxHeight: 36, alignment: .leading)
                 // A soft light behind it: real devices are often black.
                 .background {
                     RadialGradient(colors: [.white.opacity(0.2), .clear], center: .center, startRadius: 2, endRadius: 36)
-                        .frame(width: 78, height: 48)
+                        .frame(width: 66, height: 48)
                 }
         } else if let image = icon.image {
             Image(nsImage: image)

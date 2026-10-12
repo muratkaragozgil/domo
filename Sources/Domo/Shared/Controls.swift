@@ -48,9 +48,7 @@ struct StepButton: View {
     }
 }
 
-/// A labelled on/off chip, e.g. Eco Mode. The switch is the platform's own
-/// (macOS draws its switch, iOS would draw its own); the whole chip is the
-/// click target.
+/// A labelled on/off chip, e.g. Eco Mode. The whole chip is the click target.
 struct PillToggle: View {
     let title: String
     /// Outline symbol; the filled variant is used while on.
@@ -72,7 +70,7 @@ struct PillToggle: View {
                     .lineLimit(1)
                     .fixedSize()
                 // Room for the switch, which sits on top so it gets its own clicks.
-                Color.clear.frame(width: 34, height: 1)
+                Color.clear.frame(width: 42, height: 1)
             }
             .padding(.leading, 14)
             .padding(.trailing, 10)
@@ -83,10 +81,7 @@ struct PillToggle: View {
         .buttonStyle(PressableStyle(scale: 0.97))
         .accessibilityHidden(true)
         .overlay(alignment: .trailing) {
-            Toggle(title, isOn: Binding(get: { isOn }, set: { _ in action() }))
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .labelsHidden()
+            DomoSwitch(label: title, isOn: isOn, action: action)
                 .padding(.trailing, 10)
         }
         .animation(Theme.ease(0.15), value: isOn)

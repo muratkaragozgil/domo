@@ -46,8 +46,8 @@ Supports the `mmgg.feeder.fi1` model.
 
 ### Smart plugs
 
-- Every outlet of every Meross strip on your network, each with the
-  platform's own switch (the whole tile is clickable too)
+- Every outlet of every Meross strip on your network, each with its own
+  switch (the whole tile is clickable too)
 - Turn a whole strip on or off (off asks first: a router or charger may be
   plugged in)
 - Name strips and outlets with right-click → **Rename…**; names stay on
@@ -68,7 +68,8 @@ over the local API, so Domo doesn't show wattage.
 
 Deliberately quiet, following Emil Kowalski's animation rules: digits roll
 when a number changes, the AC's vent glows in the mode's color while it runs,
-kibble drops into the bowl when a feed is confirmed, buttons react on press,
+kibble drops into the bowl when a feed is confirmed, switches stretch when
+pressed and spring across, buttons react on press,
 and the tab indicator slides with a single clipped layer. With *Reduce
 Motion* on, movement gives way to simple fades.
 

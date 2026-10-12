@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 
 nonisolated struct Outlet: Identifiable, Equatable, Sendable {
     let channel: Int
@@ -39,6 +40,8 @@ final class PlugsStore {
     private(set) var notice: String?
     private(set) var hasLoaded = false
     private var names: [String: String]
+    /// Icons picked by hand; everything else follows the outlet's name.
+    private var icons: [String: String]
 
     private var pollTask: Task<Void, Never>?
     private var noticeTask: Task<Void, Never>?
@@ -46,17 +49,24 @@ final class PlugsStore {
     private var ignoreStateUntil: [String: Date] = [:]
     private var isPanelOpen = false
 
+    private static let log = Logger(subsystem: "com.muratkaragozgil.domo", category: "plugs")
     private static let namesKey = "plugs.names"
+    private static let iconsKey = "plugs.icons"
     private static let hostsKey = "plugs.hosts"
 
     init() {
         names = UserDefaults.standard.dictionary(forKey: Self.namesKey) as? [String: String] ?? [:]
+        icons = UserDefaults.standard.dictionary(forKey: Self.iconsKey) as? [String: String] ?? [:]
         startPolling()
     }
 
     /// Fixed sample data for `--snapshot`; never touches the network.
     init(demo: Bool) {
-        names = ["a": "Desk", "a.1": "Monitor", "a.2": "Lamp", "a.3": "Speakers", "b": "Living Room", "b.1": "TV", "b.2": "Router"]
+        names = [
+            "a": "Living Room", "a.1": "Subwoofer", "a.2": "PlayStation", "a.3": "Sound Bar", "a.4": "TV",
+            "b": "Office", "b.1": "Speakers", "b.2": "Desk", "b.3": "Desk Light", "b.4": "Monitor", "b.5": "USB-C",
+        ]
+        icons = [:]
         strips = [
             PowerStrip(id: "a", host: "", model: "msp844", outlets: [1, 2, 3, 4, 5].map { Outlet(channel: $0, isOn: $0 != 3) }, hasMasterSwitch: true),
             PowerStrip(id: "b", host: "", model: "mss425fc", outlets: [1, 2, 3, 4, 5].map { Outlet(channel: $0, isOn: $0 < 3) }, hasMasterSwitch: true),
@@ -81,6 +91,21 @@ final class PlugsStore {
 
     func rename(_ outlet: Outlet, in strip: PowerStrip, to name: String) {
         setName(name, for: "\(strip.id).\(outlet.channel)")
+    }
+
+    func icon(of outlet: Outlet, in strip: PowerStrip) -> OutletIcon {
+        icons["\(strip.id).\(outlet.channel)"].flatMap(OutletIcon.init(rawValue:))
+            ?? .guess(for: name(of: outlet, in: strip), isUSB: strip.isUSB(outlet))
+    }
+
+    /// `nil` goes back to picking the icon from the name.
+    func setIcon(_ icon: OutletIcon?, for outlet: Outlet, in strip: PowerStrip) {
+        icons["\(strip.id).\(outlet.channel)"] = icon?.rawValue
+        UserDefaults.standard.set(icons, forKey: Self.iconsKey)
+    }
+
+    func hasCustomIcon(_ outlet: Outlet, in strip: PowerStrip) -> Bool {
+        icons["\(strip.id).\(outlet.channel)"] != nil
     }
 
     private func setName(_ name: String, for key: String) {
@@ -163,6 +188,13 @@ final class PlugsStore {
             found = await Self.probeAll(LocalNetwork.neighborHosts(), timeout: 1.2)
         }
         guard !Task.isCancelled else { return }
+        // Nothing answered (offline, or Local Network access not granted yet):
+        // keep the remembered addresses for the next try.
+        Self.log.notice("Discovery found \(found.count, privacy: .public) strip(s), \(cached.count, privacy: .public) remembered")
+        guard !found.isEmpty else {
+            status = .failed("No Meross plugs found")
+            return
+        }
 
         strips = found.sorted { $0.host.compare($1.host, options: .numeric) == .orderedAscending }
         UserDefaults.standard.set(Dictionary(uniqueKeysWithValues: strips.map { ($0.id, $0.host) }), forKey: Self.hostsKey)

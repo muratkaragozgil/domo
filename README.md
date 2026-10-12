@@ -51,6 +51,9 @@ Supports the `mmgg.feeder.fi1` model.
   plugged in)
 - Name strips and outlets with right-click → **Rename…**; names stay on
   this Mac
+- Each outlet gets a 3D icon picked from its name, in English or Turkish
+  ("TV", "Sound Bar", "lamba", "şarj"…): full color while on, grey while off.
+  Right-click → **Icon** to choose one yourself
 - No token and no setup: the first launch sweeps the local subnet for
   Meross devices (a few seconds), then remembers them
 
@@ -123,8 +126,8 @@ Sources/Domo/
   Accessories/
     AirConditioner/    LG ThinQ client, state store, panel
     CatFeeder/         miIO protocol, state store, panel, illustration
-    Plugs/             Meross client, subnet discovery, state store, panel
-Resources/             Images bundled into the app
+    Plugs/             Meross client, subnet discovery, state store, panel, icons
+Resources/             Images bundled into the app (Icons/: outlet icons)
 ```
 
 Each accessory keeps its client, its state and its views in its own folder.
@@ -153,6 +156,9 @@ contains a native text field). `Domo --feeder-status` and
   [lg.com](https://www.lg.com/tr/klima/split-klima/ac18bh/). © LG Electronics.
 - The cat feeder image is Xiaomi's product photo of the Smart Pet Food Feeder,
   from [mi.com](https://www.mi.com/global/product/xiaomi-smart-pet-food-feeder/). © Xiaomi.
+- Outlet icons are from Microsoft's
+  [Fluent Emoji](https://github.com/microsoft/fluentui-emoji) (MIT,
+  © Microsoft Corporation; license in `Resources/Icons/LICENSE`).
 
 Domo is a personal project and isn't affiliated with or endorsed by LG
 Electronics or Xiaomi. LG and ThinQ are trademarks of LG Electronics; Xiaomi

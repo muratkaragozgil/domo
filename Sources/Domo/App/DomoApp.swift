@@ -2,9 +2,15 @@ import SwiftUI
 
 @main
 struct DomoApp: App {
-    @State private var climate = AirConditionerStore()
-    @State private var feeder = CatFeederStore()
-    @State private var plugs = PlugsStore()
+    // Snapshot and diagnostic runs get inert demo stores: no polling, and
+    // nothing written to the real app's preferences.
+    @State private var climate = DomoApp.isTool ? AirConditionerStore(demo: true) : AirConditionerStore()
+    @State private var feeder = DomoApp.isTool ? CatFeederStore(demo: true) : CatFeederStore()
+    @State private var plugs = DomoApp.isTool ? PlugsStore(demo: true) : PlugsStore()
+
+    private static let isTool = CommandLine.arguments.contains {
+        ["--snapshot", "--icon", "--feeder-status", "--plugs-status"].contains($0)
+    }
 
     init() {
         if CommandLine.arguments.contains("--feeder-status") {

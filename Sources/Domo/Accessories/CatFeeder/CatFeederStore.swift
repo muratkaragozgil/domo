@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 
 struct Meal: Identifiable, Equatable {
     let id: Int
@@ -39,6 +40,7 @@ final class CatFeederStore {
     }
 
     static let portionRange = 1...10
+    private static let log = Logger(subsystem: "com.muratkaragozgil.domo", category: "feeder")
 
     private(set) var status: Status = .connecting
     private(set) var notice: String?
@@ -128,6 +130,7 @@ final class CatFeederStore {
         } catch is CancellationError {
             return
         } catch let error as MiioError {
+            Self.log.error("Feeder refresh failed: \(error.localizedDescription, privacy: .public)")
             switch error {
             case .invalidToken, .wrongToken: needsToken = true
             case .noReply, .notFound: device = nil // the IP may have changed; look again next time

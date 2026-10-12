@@ -34,6 +34,7 @@ PLIST
 
 [[ -f AppIcon.icns ]] && cp AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp Resources/*.png "$APP/Contents/Resources/"
+mkdir -p "$APP/Contents/Resources/Icons" && cp Resources/Icons/*.png "$APP/Contents/Resources/Icons/"
 
 codesign --force --sign - "$APP"
 

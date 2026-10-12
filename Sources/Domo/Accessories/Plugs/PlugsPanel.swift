@@ -132,19 +132,29 @@ private struct OutletTile: View {
 
     var body: some View {
         let name = store.name(of: outlet, in: strip)
-        let isUSB = strip.isUSB(outlet)
+        let icon = store.icon(of: outlet, in: strip)
         let accent = PlugsPanel.accent
 
         Button {
             store.toggle(outlet, in: strip)
         } label: {
             VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Image(systemName: isUSB ? "cable.connector" : "poweroutlet.type.f")
-                        .symbolVariant(outlet.isOn && !isUSB ? .fill : .none)
-                        .font(.system(size: 17))
-                        .foregroundStyle(outlet.isOn ? accent : .secondary)
-                        .contentTransition(.symbolEffect(.replace))
+                HStack(alignment: .top) {
+                    // Full color while powered, grey and faded while off.
+                    Group {
+                        if let image = icon.image {
+                            Image(nsImage: image)
+                                .resizable()
+                                .interpolation(.high)
+                        } else {
+                            Image(systemName: "poweroutlet.type.f")
+                                .resizable()
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .frame(width: 28, height: 28)
+                    .saturation(outlet.isOn ? 1 : 0)
+                    .opacity(outlet.isOn ? 1 : 0.45)
                     Spacer()
                     Text(outlet.isOn ? "On" : "Off")
                         .font(.system(size: 11, weight: .medium))
@@ -174,6 +184,25 @@ private struct OutletTile: View {
         .onHover { isHovered = $0 }
         .contextMenu {
             Button("Rename…") { isRenaming = true }
+            Menu("Icon") {
+                Button {
+                    store.setIcon(nil, for: outlet, in: strip)
+                } label: {
+                    if store.hasCustomIcon(outlet, in: strip) { Text("Match Name") } else { Label("Match Name", systemImage: "checkmark") }
+                }
+                Divider()
+                ForEach(OutletIcon.allCases) { option in
+                    Button {
+                        store.setIcon(option, for: outlet, in: strip)
+                    } label: {
+                        if store.hasCustomIcon(outlet, in: strip) && option == icon {
+                            Label(option.title, systemImage: "checkmark")
+                        } else {
+                            Text(option.title)
+                        }
+                    }
+                }
+            }
         }
         .popover(isPresented: $isRenaming, arrowEdge: .bottom) {
             RenameField(title: "Rename outlet", name: name) { store.rename(outlet, in: strip, to: $0) }

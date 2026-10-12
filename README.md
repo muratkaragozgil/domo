@@ -99,3 +99,8 @@ state, `--live` for your real unit, or `--setup` for the token screen.
 
 Domo is a personal project and isn't affiliated with or endorsed by LG
 Electronics. LG and ThinQ are trademarks of LG Electronics.
+
+## License
+
+The code is released under the [MIT License](LICENSE). Product photos are
+the property of their manufacturers and aren't covered by it.

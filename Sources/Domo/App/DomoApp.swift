@@ -4,11 +4,17 @@ import SwiftUI
 struct DomoApp: App {
     @State private var climate = AirConditionerStore()
     @State private var feeder = CatFeederStore()
+    @State private var plugs = PlugsStore()
 
     init() {
         if CommandLine.arguments.contains("--feeder-status") {
             Task {
                 await FeederDiagnostics.run()
+                exit(0)
+            }
+        } else if CommandLine.arguments.contains("--plugs-status") {
+            Task {
+                await PlugsDiagnostics.run()
                 exit(0)
             }
         } else if let snapshot = Snapshot.request {
@@ -23,6 +29,7 @@ struct DomoApp: App {
             RootPanel()
                 .environment(climate)
                 .environment(feeder)
+                .environment(plugs)
         } label: {
             MenuBarLabel(climate: climate)
         }

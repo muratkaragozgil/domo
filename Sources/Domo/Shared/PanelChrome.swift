@@ -19,7 +19,7 @@ struct PanelFooter: View {
     let status: StatusLine
     let menuTitle: String
     let onRefresh: () -> Void
-    let onChangeToken: () -> Void
+    var onChangeToken: (() -> Void)? = nil
 
     var body: some View {
         HStack {
@@ -40,7 +40,7 @@ struct PanelFooter: View {
 struct SettingsMenu: View {
     let title: String
     let onRefresh: () -> Void
-    let onChangeToken: () -> Void
+    var onChangeToken: (() -> Void)? = nil
 
     @State private var opensAtLogin = SMAppService.mainApp.status == .enabled
 
@@ -49,7 +49,9 @@ struct SettingsMenu: View {
             Section(title) {
                 Button("Refresh Now", action: onRefresh)
                     .keyboardShortcut("r")
-                Button("Change Token…", action: onChangeToken)
+                if let onChangeToken {
+                    Button("Change Token…", action: onChangeToken)
+                }
             }
             Divider()
             Toggle("Open at Login", isOn: $opensAtLogin)

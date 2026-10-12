@@ -8,7 +8,7 @@ Click the icon, change what you need, get back to work.
   &nbsp;
   <img src="docs/feeder.png" width="270" alt="Domo's cat feeder panel">
   &nbsp;
-  <img src="docs/setup.png" width="270" alt="Connecting the cat feeder">
+  <img src="docs/plugs.png" width="270" alt="Domo's smart plugs panel">
 </p>
 
 ## What it controls
@@ -17,7 +17,7 @@ Click the icon, change what you need, get back to work.
 | --- | --- | --- |
 | Air conditioner | LG ThinQ (official ThinQ Connect API) | ✅ Working |
 | Cat feeder | Xiaomi Smart Pet Food Feeder (local miIO, no cloud) | ✅ Working |
-| Smart plugs | Meross (local HTTP) | Planned |
+| Smart plugs | Meross strips and plugs (local HTTP, no token) | ✅ Working |
 | Lights, curtains, door, cameras | — | Planned |
 
 Switch between accessories with the tabs at the top of the panel.
@@ -44,6 +44,20 @@ Switch between accessories with the tabs at the top of the panel.
 
 Supports the `mmgg.feeder.fi1` model.
 
+### Smart plugs
+
+- Every outlet of every Meross strip on your network, one tap to switch
+- Turn a whole strip on or off (off asks first: a router or charger may be
+  plugged in)
+- Name strips and outlets with right-click → **Rename…**; names stay on
+  this Mac
+- No token and no setup: the first launch sweeps the local subnet for
+  Meross devices (a few seconds), then remembers them
+
+Tested with the MSS425F and MSP844 strips. Plugs locked to a Meross cloud
+key won't answer unsigned requests; the MSP844's power meter doesn't report
+over the local API, so Domo doesn't show wattage.
+
 ### Motion
 
 Deliberately quiet, following Emil Kowalski's animation rules: digits roll
@@ -67,8 +81,9 @@ This builds a release binary, wraps it in `Domo.app`, signs it ad hoc and
 installs it to `~/Applications`. Open it from there; it lives in the menu bar
 (no Dock icon). *Open at Login* is in the settings menu at the bottom right.
 
-The first time the cat feeder connects, macOS asks whether Domo may find
-devices on your local network. Allow it, or the feeder can't be reached.
+The first time Domo looks for the feeder or the plugs, macOS asks whether
+it may find devices on your local network. Allow it, or they can't be
+reached.
 
 ## Connecting LG ThinQ
 
@@ -94,8 +109,10 @@ Either token can be changed later from the settings menu → **Change Token…**
 
 - Tokens are stored only on your Mac, readable by your user alone:
   `~/.config/lg-thinq/token` and `~/.config/xiaomi-feeder/token`.
-- Domo talks to LG's API for the AC and directly to the feeder on your local
-  network. Nothing else: no analytics, no accounts.
+- Domo talks to LG's API for the AC, and directly to the feeder and plugs on
+  your local network. Nothing else: no analytics, no accounts.
+- Plug names and the plugs' last known addresses live in Domo's preferences
+  on this Mac.
 
 ## Project layout
 
@@ -106,6 +123,7 @@ Sources/Domo/
   Accessories/
     AirConditioner/    LG ThinQ client, state store, panel
     CatFeeder/         miIO protocol, state store, panel, illustration
+    Plugs/             Meross client, subnet discovery, state store, panel
 Resources/             Images bundled into the app
 ```
 
@@ -119,11 +137,11 @@ Adding one means a new folder, a case in `AccessoryKind`, and a line in
 ~/Applications/Domo.app/Contents/MacOS/Domo --snapshot panel.png --swiftui --tab feeder
 ```
 
-Renders the panel with demo data and quits. `--tab climate|feeder` picks the
+Renders the panel with demo data and quits. `--tab climate|feeder|plugs` picks the
 accessory, `--off` shows the AC powered off, `--live` uses your real devices,
 `--setup` shows the token screen (drop `--swiftui` for that one, since it
-contains a native text field). `Domo --feeder-status` runs a read-only check
-of the feeder from the command line.
+contains a native text field). `Domo --feeder-status` and
+`Domo --plugs-status` run read-only checks from the command line.
 
 ## Credits
 

@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum AccessoryKind: String, CaseIterable, Identifiable {
-    case climate, feeder
+    case climate, feeder, plugs
 
     var id: String { rawValue }
 
@@ -9,6 +9,7 @@ enum AccessoryKind: String, CaseIterable, Identifiable {
         switch self {
         case .climate: "Climate"
         case .feeder: "Cat Feeder"
+        case .plugs: "Plugs"
         }
     }
 
@@ -16,6 +17,7 @@ enum AccessoryKind: String, CaseIterable, Identifiable {
         switch self {
         case .climate: "air.conditioner.horizontal"
         case .feeder: "cat"
+        case .plugs: "poweroutlet.type.f"
         }
     }
 }

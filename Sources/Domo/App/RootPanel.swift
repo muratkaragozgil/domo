@@ -10,6 +10,7 @@ struct RootPanel: View {
 
     @Environment(AirConditionerStore.self) private var climate
     @Environment(CatFeederStore.self) private var feeder
+    @Environment(PlugsStore.self) private var plugs
     @AppStorage("selectedAccessory") private var storedSelection: AccessoryKind = .climate
 
     private var selection: AccessoryKind { forcedSelection ?? storedSelection }
@@ -24,6 +25,8 @@ struct RootPanel: View {
                 AirConditionerPanel(isEditingToken: startsEditingToken)
             case .feeder:
                 CatFeederPanel(isEditingToken: startsEditingToken)
+            case .plugs:
+                PlugsPanel()
             }
         }
         .padding(20)
@@ -37,6 +40,9 @@ struct RootPanel: View {
                 case .feeder:
                     RadialGradient(colors: [CatFeederPanel.accent.opacity(0.08), .clear],
                                    center: .top, startRadius: 10, endRadius: 260)
+                case .plugs:
+                    RadialGradient(colors: [PlugsPanel.accent.opacity(0.06), .clear],
+                                   center: .top, startRadius: 10, endRadius: 260)
                 }
             }
             .ignoresSafeArea()
@@ -45,10 +51,12 @@ struct RootPanel: View {
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
             climate.panelDidOpen()
             feeder.panelDidOpen()
+            plugs.panelDidOpen()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in
             climate.panelDidClose()
             feeder.panelDidClose()
+            plugs.panelDidClose()
         }
     }
 }

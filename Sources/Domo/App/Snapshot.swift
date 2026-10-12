@@ -47,7 +47,7 @@ enum Snapshot {
 
     private static var window: NSWindow?
 
-    /// Flags: `--tab climate|feeder`, `--off` (AC powered off), `--live`
+    /// Flags: `--tab climate|feeder|plugs`, `--off` (AC powered off), `--live`
     /// (real devices), `--setup` (token screen), `--swiftui` (draws blurs).
     static func run(path: String, isOn: Bool) {
         let args = CommandLine.arguments
@@ -55,11 +55,13 @@ enum Snapshot {
         let tab = args.firstIndex(of: "--tab").flatMap { args.indices.contains($0 + 1) ? AccessoryKind(rawValue: args[$0 + 1]) : nil } ?? .climate
         let climate = live ? AirConditionerStore() : AirConditionerStore(demo: isOn)
         let feeder = live ? CatFeederStore() : CatFeederStore(demo: true)
+        let plugs = live ? PlugsStore() : PlugsStore(demo: true)
 
         func panel() -> some View {
             RootPanel(forcedSelection: tab, startsEditingToken: args.contains("--setup"))
                 .environment(climate)
                 .environment(feeder)
+                .environment(plugs)
                 .environment(\.colorScheme, .dark)
         }
 
@@ -74,7 +76,13 @@ enum Snapshot {
 
         Task {
             if live {
-                let loaded = { tab == .climate ? climate.hasLoaded : feeder.hasLoaded }
+                let loaded = {
+                    switch tab {
+                    case .climate: climate.hasLoaded
+                    case .feeder: feeder.hasLoaded
+                    case .plugs: plugs.hasLoaded
+                    }
+                }
                 for _ in 0..<60 where !loaded() { try? await Task.sleep(for: .milliseconds(250)) }
                 hosting.frame.size = hosting.fittingSize
                 window.setContentSize(hosting.fittingSize)

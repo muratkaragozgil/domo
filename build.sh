@@ -26,7 +26,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>LSMinimumSystemVersion</key><string>26.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
-    <key>NSLocalNetworkUsageDescription</key><string>Domo talks to your cat feeder directly over your home Wi-Fi.</string>
+    <key>NSLocalNetworkUsageDescription</key><string>Domo talks to your cat feeder and plugs directly over your home Wi-Fi.</string>
+    <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
 </dict>
 </plist>
 PLIST

@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 import os
@@ -106,6 +107,26 @@ final class PlugsStore {
 
     func hasCustomIcon(_ outlet: Outlet, in strip: PowerStrip) -> Bool {
         icons["\(strip.id).\(outlet.channel)"] != nil
+    }
+
+    /// Bumped when a picture changes, so tiles reload it.
+    private(set) var photoRevision = 0
+
+    /// A picture of the actual device, if one was chosen; it wins over the icon.
+    func photo(of outlet: Outlet, in strip: PowerStrip) -> NSImage? {
+        _ = photoRevision
+        return OutletImages.image(for: "\(strip.id).\(outlet.channel)")
+    }
+
+    func choosePhoto(for outlet: Outlet, in strip: PowerStrip) {
+        if OutletImages.choose(for: "\(strip.id).\(outlet.channel)", title: name(of: outlet, in: strip)) {
+            photoRevision += 1
+        }
+    }
+
+    func removePhoto(for outlet: Outlet, in strip: PowerStrip) {
+        OutletImages.remove(for: "\(strip.id).\(outlet.channel)")
+        photoRevision += 1
     }
 
     private func setName(_ name: String, for key: String) {

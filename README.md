@@ -53,7 +53,9 @@ Supports the `mmgg.feeder.fi1` model.
   this Mac
 - Each outlet gets a 3D icon picked from its name, in English or Turkish
   ("TV", "Sound Bar", "lamba", "şarj"…): full color while on, grey while off.
-  Right-click → **Icon** to choose one yourself
+  Right-click → **Icon** to choose one yourself, or **Choose Image…** to use
+  a photo of the actual device (kept in `~/Library/Application Support/Domo`,
+  not in this repo)
 - No token and no setup: the first launch sweeps the local subnet for
   Meross devices (a few seconds), then remembers them
 

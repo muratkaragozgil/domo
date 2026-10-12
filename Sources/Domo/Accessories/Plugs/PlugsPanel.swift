@@ -142,17 +142,30 @@ private struct OutletTile: View {
                 HStack(alignment: .top) {
                     // Full color while powered, grey and faded while off.
                     Group {
-                        if let image = icon.image {
+                        if let photo = store.photo(of: outlet, in: strip) {
+                            Image(nsImage: photo)
+                                .resizable()
+                                .interpolation(.high)
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: 62, maxHeight: 36, alignment: .leading)
+                                // A soft light behind it: real devices are often black.
+                                .background {
+                                    RadialGradient(colors: [.white.opacity(0.2), .clear], center: .center, startRadius: 2, endRadius: 36)
+                                        .frame(width: 78, height: 48)
+                                }
+                        } else if let image = icon.image {
                             Image(nsImage: image)
                                 .resizable()
                                 .interpolation(.high)
+                                .frame(width: 28, height: 28)
                         } else {
                             Image(systemName: "poweroutlet.type.f")
                                 .resizable()
                                 .foregroundStyle(.secondary)
+                                .frame(width: 28, height: 28)
                         }
                     }
-                    .frame(width: 28, height: 28)
+                    .frame(height: 36, alignment: .topLeading)
                     .saturation(outlet.isOn ? 1 : 0)
                     .opacity(outlet.isOn ? 1 : 0.45)
                     Spacer()
@@ -167,7 +180,7 @@ private struct OutletTile: View {
                     .multilineTextAlignment(.leading)
             }
             .padding(10)
-            .frame(maxWidth: .infinity, minHeight: 72, maxHeight: 72, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 80, maxHeight: 80, alignment: .leading)
             .background {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(outlet.isOn ? accent.opacity(0.14) : (isHovered ? Theme.surfaceHover : Theme.surface))
@@ -185,6 +198,11 @@ private struct OutletTile: View {
         .contextMenu {
             Button("Rename…") { isRenaming = true }
             Menu("Icon") {
+                Button("Choose Image…") { store.choosePhoto(for: outlet, in: strip) }
+                if store.photo(of: outlet, in: strip) != nil {
+                    Button("Remove Image") { store.removePhoto(for: outlet, in: strip) }
+                }
+                Divider()
                 Button {
                     store.setIcon(nil, for: outlet, in: strip)
                 } label: {
